@@ -1,0 +1,350 @@
+---
+title: "Analisis-Dataset-Pacientes-Covid19"
+author: "Dani"
+date: "28/4/2020"
+output: word_document
+---
+
+Antes de comenzar se van a introducir las librerías usadas
+
+
+```{r libraries, warning=FALSE, message=FALSE}
+library(xlsx)
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+```
+
+Se carga el dataset de los datos de los pacientes.
+
+```{r}
+archivo <- "C:/Users/Daniel/Desktop/TFG/data/datos_pacientes.xlsx"
+datos_pacientes <- read.xlsx(archivo,sheetIndex = 1,header = TRUE)
+```
+
+Primero se van a mostrar las variables que hay en el dataset
+
+```{r}
+names(datos_pacientes)
+```
+
+A continuación, se van a explicar dichas variables: 
+
+-*Id*: número de identificación para cada paciente
+
+-*Case_in_country*: se trata del número de caso de esa persona en su país.
+
+-*Reporting date*: fecha en la que se notificó el caso.
+
+-*Summary*: resumen general del paciente, si visita Wuhán, síntomas, cuándo aparecen los síntomas…
+
+-*Location*: provincia/ estado de la que pertenece el individuo.
+
+-*Country*: país del que pertenece el individuo.
+
+-*Gender*: sexo del individuo.
+
+-*Age*: edad del individuo. 
+
+-*Symptom_onset*: fecha de aparición de síntomas.
+
+-*If_onset_approximated*: fecha de aparición aproximada.
+
+-*hosp_visit_date*: fecha de visita al hospital.
+
+-*International_traveller*: indica si el individuo ha viajado (1) o no (0) fuera de las fronteras de su país.
+
+-*Domestic_traveller*: indica si el individuo ha viajado (1) o no (0) dentro de las fronteras de su país.
+
+-*Exposure_start*: fecha de inicio de exposición a la enfermedad.
+
+-*Exposure_end*: fecha de fin de la exposición.
+
+-*Traveler*: indica si el individuo ha viajado o no.
+
+-*Visiting_Wuhan*: indica si el individuo visita Wuhán
+
+-*From_Wuhan*: indica si el individuo proviene de Wuhán
+
+-*Death*: indica si el individuo ha muerto.
+
+-*Recovered*: indica si el individuo se ha recuperado de la enfermedad.
+
+-*Symtom*: síntomas que han aparecido en el individuo.
+
+-*Source*: fuente de donde se consiguen los datos.
+
+-*Link*: url de los datos
+
+Se va a realizar una función para poder adquirir información de las diferentes variables que nos interesan.
+
+```{r funcionRepresentar}
+representar_variable <- function(variable){
+  if(is.numeric(variable)){
+    cat("La variable es de tipo numérica como podemos comprobar: ",class(variable),"\n")
+    c <- mean(variable, na.rm = TRUE)
+    cat("La media de la variable es: ",c,"\n")
+    d <- var(variable, na.rm = TRUE)
+    cat("La varianza de la variable es: ",d,"\n")
+    e<- sd(variable, na.rm = TRUE)
+    cat("La desviación estándar de la variable es: ",e,"\n")
+    f<- median(variable, na.rm = TRUE)
+    cat("La mediana de la variable es: ",f,"\n")
+    hist(variable, las=2, col="cyan", main="Histograma",ylab="Personas")
+  } else if(is.factor(variable)){
+    cat("La variable es de tipo factor como podemos comprobar: ",class(variable),"\n")
+    a1 <- levels(variable)
+    cat("A continuación, se obtendrán los diferentes valores existentes: ",a1,"\n")
+    cat("Ahora se va a ver la distribución \n")
+    pie(table(variable))
+    }
+}
+```
+
+La primera variable que se va a representar es la edad:
+
+```{r}
+representar_variable(datos_pacientes$age)
+```
+
+La siguiente variable a representar es el género:
+
+```{r}
+representar_variable(datos_pacientes$gender)
+```
+
+A continuación, se van a ver los posibles valores tomados en los síntomas.
+
+```{r}
+head(levels(datos_pacientes$symptom),20)
+```
+
+Se puede observar que los síntomas están recogidos de diferentes formas por lo que habrá que normalizarlos. 
+Así mismo, se hará lo mismo con las visitas al hospital
+
+```{r}
+levels(datos_pacientes$hosp_visit_date)
+```
+
+Se puede comprobar que hay fechas que están completas en el formato mes/día/año. Sin embargo, hay otras que no están completas y en otras simplemente aparecen números. Viendo estos problemas, simplemente se creará otra columna en la que se añadirá 1 si visitó el hospital y NA si no.
+
+```{r} 
+datos_pacientes$logic_hosp <- ifelse(datos_pacientes$hosp_visit_date!=0,1,0)
+head(datos_pacientes$logic_hosp,25)
+```
+
+Ahora se van a buscar pacientes que tengan las características que nos interesan rellenadas, es decir, presenten edad, género y los síntomas. La columna 
+
+```{r}
+datos_pacientes_creados <- datos_pacientes[!is.na(datos_pacientes$age),]
+datos_pacientes_creados <- datos_pacientes_creados[!is.na(datos_pacientes$gender),]
+datos_pacientes_creados <- datos_pacientes_creados[!is.na(datos_pacientes_creados$symptom),]
+cat(c("Al principio el dataset presentaba", nrow(datos_pacientes),"filas", "\n"))
+cat(c("Tras haber eliminado las filas que tenían o la edad, el género o los síntomas vacíos, el dataset presenta", nrow(datos_pacientes_creados),"filas", "\n"))
+```
+
+A continuación se van a sustituir los valores NA de la variable logic_hosp por 0. De esta forma el dataset generado tendrá un 1 si el paciente visitó el hospital y un 0 si no lo hizo.
+
+```{r}
+datos_pacientes_creados$logic_hosp[is.na(datos_pacientes_creados$logic_hosp)] <- 0
+datos_pacientes_creados$death[is.na(datos_pacientes_creados$death)] <- 0
+datos_pacientes_creados$recovered[is.na(datos_pacientes_creados$recovered)] <- 0
+```
+
+Por último se eliminarán las columnas que no van a ser usadas y se va a generar un dataset nuevo.
+
+```{r}
+datos_pacientes_creados <- select(datos_pacientes_creados,id,gender,age,symptom,logic_hosp)
+dir_archivo <- "C:/Users/Daniel/Desktop/TFG/data/datos_covid19.xlsx"
+write.xlsx(datos_pacientes_creados,dir_archivo)
+```
+
+Con este dataset generado se van a normalizar los síntomas genererados, de tal forma que por cada paciente aparezcan todos los síntomas y "true" si lo padece o "false" en el caso contrario.
+Para ello, se usará Excel y se tienen que tener en cuenta ciertas consideraciones:
+
+-La primera de ellas es que los datos provienen de diferentes países por lo que existen cosas nombradas de diferentes formas. Así por ejemplo existían pacientes con el síntoma "tired" que en el dataset ha sido clasificado en "fatigue".
+
+-La segunda es que en esta clasificación no se va a atender al grado del síntoma. Al normalizar los datos algunos eran del estilo "high fever", el cual no tendría cabida en el dataset, por lo que se le añade un "true" a la variable "fever".
+
+-La tercera es que algunos síntomas podían ser englobados en otros y aparecían en pocos pacientes. Así que para no sobrecargar el dataset, no se ha añadido ese síntoma y al paciente que lo presentaba se le ha puesto el síntoma más general y que englobaba el mencionado anteriormente.
+
+-Y por último, también ocurría el caso contrario a la tercera consideración. Algunos pacientes tenían "flu symptoms", por lo que se ha optado en dividirlo en los síntomas que aparecen en el dataset.
+
+De este modo tras haberlo normalizado el dataset obtenido es el siguiente:
+
+```{r, echo=FALSE}
+dir_archivo <- "C:/Users/Daniel/Desktop/TFG/data/datos_pacientes_con_sintomas.xlsx"
+datos_pacientes_sintomas <- read.xlsx(dir_archivo,sheetIndex = 1,header = TRUE)
+```
+
+```{r}
+head(datos_pacientes_sintomas)
+```
+Una vez se tiene un dataset con la información que se necesita se va a profundizar en el análisis.
+
+Se empezará de nuevo con la edad
+
+```{r}
+representar_variable(datos_pacientes_sintomas$age)
+```
+
+Como se puede observar se ha producido un cambio en el análisis de la edad.
+A continuación se va a observar la distribución de la población respecto al género. Se puede observar que hay más hombres que mujeres en el dataset.
+
+```{r}
+ggplot(datos_pacientes_sintomas, aes(x = datos_pacientes_sintomas$gender)) +
+  geom_bar(width = 0.4,  fill=rgb(0.1,1,0.5,0.7)) +
+  scale_x_discrete("Sexo") +     # configuración eje X (etiqueta del eje)
+  scale_y_continuous("Frecuencia") +
+  labs(title = "Distribución hombre y mujeres",
+       subtitle = "Frecuencia absoluta de la variable 'gender'")
+```
+
+Ahora se va a realizar la distribución de la población respecto a si presenta el síntoma fiebre o no.
+
+```{r}
+ggplot(datos_pacientes_sintomas, aes(x = datos_pacientes_sintomas$fever)) +
+  geom_bar(width = 0.4,  fill=rgb(0.1,1,0.8,0.7)) +
+  scale_x_discrete("Fiebre") +     # configuración eje X (etiqueta del eje)
+  scale_y_continuous("Frecuencia") +
+  labs(title = "Distribución de personas con y sin fiebre",
+       subtitle = "Frecuencia absoluta de la variable 'fever'")
+```
+
+Además, se va a mirar esta distribución respecto al género de cada paciente.
+
+```{r}
+barplot(table(datos_pacientes_sintomas$fever,datos_pacientes_sintomas$gender), legend.text = c("sin fiebre", "con fiebre"), ylab="Número de personas", main = "Distribución de personas según género y el síntoma fiebre")
+```
+
+Se puede observar que existen un número mayor de hombres que de mujeres que presentan el síntoma fiebre.
+
+Esto mismo se va a hacer para diferentes síntomas: dificultad al respirar, neumonía y tos.
+
+```{r}
+barplot(table(datos_pacientes_sintomas$difficult.in.breathing,datos_pacientes_sintomas$gender), legend.text = c("sin dificultad", "con dificultad"), ylab="Número de personas", main = "Distribución de personas según género y el síntoma dificultad al respirar")
+```
+
+Se puede observar que existen más hombres que mujeres con dificultad al respirar. Esto podría ser debido a que hay más hombres que mujeres, por lo que se va a realizar la proporción.
+
+Para ello se creará una tabla y se dividirá por el número de mujeres y hombres respectivamente.
+
+```{r}
+tabla_dificultad <- table(datos_pacientes_sintomas$difficult.in.breathing,datos_pacientes_sintomas$gender)
+numero_mujeres <- as.numeric(sum((datos_pacientes_sintomas$gender=="female")*1))
+numero_hombres <- as.numeric(sum((datos_pacientes_sintomas$gender=="male")*1))
+```
+
+```{r message=FALSE}
+tabla_dificultad[1,1] <- tabla_dificultad[1,1]/numero_mujeres
+tabla_dificultad[2,1] <- tabla_dificultad[2,1]/numero_mujeres
+tabla_dificultad[1,2] <- tabla_dificultad[1,2]/numero_hombres
+tabla_dificultad[2,2] <- tabla_dificultad[2,2]/numero_hombres
+```
+
+Y así se conseguiría la tabla correspondiente
+
+```{r}
+tabla_dificultad
+```
+
+De esta forma se observa como es más probable que los hombres tengan dicho síntoma. A continuación se va a repetir el proceso con la neumonía.
+
+```{r}
+tabla_neumonia <- table(datos_pacientes_sintomas$pneumonia,datos_pacientes_sintomas$gender)
+```
+
+```{r, message=FALSE}
+tabla_neumonia[1,1] <- tabla_neumonia[1,1]/numero_mujeres
+tabla_neumonia[2,1] <- tabla_neumonia[2,1]/numero_mujeres
+tabla_neumonia[1,2] <- tabla_neumonia[1,2]/numero_hombres
+tabla_neumonia[2,2] <- tabla_neumonia[2,2]/numero_hombres
+```
+
+Ahora se va a ver la proporción de la neumonía en la población según el género
+
+```{r}
+tabla_neumonia
+```
+
+Una vez visto los valores, se va a realizar la representacción.
+
+```{r}
+barplot(table(datos_pacientes_sintomas$pneumonia,datos_pacientes_sintomas$gender), legend.text = c("sin neumonia", "con neumonia"), ylab="Número de personas", main = "Distribución de personas según género y el síntoma neumonía")
+```
+
+Según los datos de esta población se puede ver como es más probable la neumonía en mujeres que en hombres.
+
+Por último, se va a realizar el mismo proceso con el síntoma tos.
+
+```{r, message=FALSE}
+tabla_tos <- table(datos_pacientes_sintomas$pneumonia,datos_pacientes_sintomas$gender)
+tabla_tos[1,1] <- tabla_tos[1,1]/numero_mujeres
+tabla_tos[2,1] <- tabla_tos[2,1]/numero_mujeres
+tabla_tos[1,2] <- tabla_tos[1,2]/numero_hombres
+tabla_tos[2,2] <- tabla_tos[2,2]/numero_hombres
+```
+
+```{r}
+tabla_tos
+barplot(table(datos_pacientes_sintomas$cough,datos_pacientes_sintomas$gender), legend.text = c("sin tos", "con tos"), ylab="Número de personas", main = "Distribución de personas según género y el síntoma tos")
+```
+
+Se vuelve a dar la coincidencia que el síntoma tos es más probable en las mujeres que en los hombres.
+
+Por último, se va a estudiar el porcentaje de cada síntoma en la población redondeando a partir del segundo decimal
+```{r, echo=FALSE}
+numero_pacientes <-  numero_hombres+numero_mujeres
+porcentaje_fiebre <- round(sum((datos_pacientes_sintomas$fever=="true")*1)/numero_pacientes * 100,2)
+porcentaje_tos <- round(sum((datos_pacientes_sintomas$cough=="true")*1)/numero_pacientes * 100,2)
+porcentaje_dificultad_resp <- round(sum((datos_pacientes_sintomas$difficult.in.breathing=="true")*1)/numero_pacientes * 100,2)
+porcentaje_fatiga <- round(sum((datos_pacientes_sintomas$fatigue=="true")*1)/numero_pacientes * 100,2)
+porcentaje_dolor_articular <- round(sum((datos_pacientes_sintomas$joint.pain=="true")*1)/numero_pacientes * 100,2)
+porcentaje_neumonia <- round(sum((datos_pacientes_sintomas$pneumonia=="true")*1)/numero_pacientes * 100,2)
+porcentaje_vomito <- round(sum((datos_pacientes_sintomas$vomiting=="true")*1)/numero_pacientes * 100,2)
+porcentaje_diarrea <- round(sum((datos_pacientes_sintomas$diarrhea=="true")*1)/numero_pacientes * 100,2)
+porcentaje_malestar <- round(sum((datos_pacientes_sintomas$malaise=="true")*1)/numero_pacientes * 100,2)
+porcentaje_dolor_muscular <- round(sum((datos_pacientes_sintomas$muscle.pain=="true")*1)/numero_pacientes * 100,2)
+porcentaje_dolor_garganta <- round(sum((datos_pacientes_sintomas$sore.throat=="true")*1)/numero_pacientes * 100,2)
+porcentaje_perdida_apetito <- round(sum((datos_pacientes_sintomas$loss.of.apetit=="true")*1)/numero_pacientes * 100,2)
+porcentaje_nausea <- round(sum((datos_pacientes_sintomas$nausea=="true")*1)/numero_pacientes * 100,2)
+porcentaje_visita_hosp <- round(sum((datos_pacientes_sintomas$logic_hosp=="true")*1)/numero_pacientes * 100,2)
+nombres <- c("Porcentaje de fiebre", "Porcentaje de tos", "Porcentaje dificultad al respirar", "Porcentaje de fatiga", "Porcentaje de dolor articular", "Porcentaje de neumonía", "Porcentaje de vómitos", "Porcentaje de diarrea", "Porcentaje de malestar", "Porcentaje de dolor muscular", "Porcentajde de dolor de garganta", "Porcentaje de pérdida de apetito", "Porcentaje de nausea", "Porcentaje visita hospital")
+valores <- c(porcentaje_fiebre,porcentaje_tos,porcentaje_dificultad_resp,porcentaje_fatiga,porcentaje_dolor_articular ,porcentaje_neumonia,porcentaje_vomito,porcentaje_diarrea,porcentaje_malestar,porcentaje_dolor_muscular ,porcentaje_dolor_garganta ,porcentaje_perdida_apetito ,porcentaje_nausea, porcentaje_visita_hosp)
+```
+```{r}
+tabla_porcentajes <- data.frame (cbind(nombres,valores))
+tabla_porcentajes
+```
+
+
+
+Además, se va a crear otro dataset en el que se añadan también otras características del primer dataset inicial.
+
+```{r}
+vector_id <- datos_pacientes_sintomas$id
+data_auxiliar <- datos_pacientes[vector_id,]
+
+datos_pacientes_sintomas$country <- data_auxiliar$country
+
+datos_pacientes_sintomas$traveler<- ifelse(data_auxiliar$traveler!=0,"true","false")
+datos_pacientes_sintomas$traveler[is.na(datos_pacientes_sintomas$traveler)] <- "false"
+
+datos_pacientes_sintomas$visit_Wuhan<- ifelse(data_auxiliar$visiting.Wuhan!=0,"true","false")
+datos_pacientes_sintomas$visit_Wuhan[is.na(datos_pacientes_sintomas$visit_Wuhan)] <- 0
+
+datos_pacientes_sintomas$from_Wuhan<- ifelse(data_auxiliar$from.Wuhan!=0,"true","false")
+datos_pacientes_sintomas$from_Wuhan[is.na(datos_pacientes_sintomas$from_Wuhan)] <- "false"
+
+
+datos_pacientes_sintomas$death<- ifelse(data_auxiliar$death!=0,"true","false")
+
+datos_pacientes_sintomas$recovered<- ifelse(data_auxiliar$recovered!=0,"true","false")
+```
+
+A continuación se va a exportar el dataset en un archivo .xlsx.
+
+```{r}
+dir_archivo <- "C:/Users/Daniel/Desktop/TFG/data/datos_pacientes_sintomas_completos.xlsx"
+write.xlsx(datos_pacientes_sintomas,dir_archivo)
+```
