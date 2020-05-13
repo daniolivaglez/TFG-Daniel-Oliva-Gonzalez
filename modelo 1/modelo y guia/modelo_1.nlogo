@@ -12,6 +12,10 @@ globals
   calculo-casos                                    ;; indica el número de casos según los datos introducidos
   calculo-recuperados                              ;; indica el número de recuperados según los datos introducidos
   calculo-muertos                                  ;; indica el número de muertos según los datos introducidos
+  infectados-anterior
+  r0
+  gamma
+  beta-n
 ]
 
 turtles-own
@@ -120,10 +124,11 @@ to go                                              ;; se realiza el movimiento d
   ask turtles
   [
     cambia-color
+    tasa-r0
     set porcentaje-infectados (count turtles with [infectado?] / numero-personas * 100)
     set porcentaje-curados (count turtles with [curado?] / numero-personas * 100)
     set porcentaje-muertos ((muertos) / numero-personas * 100)
-    set porcentaje-susceptibles numero-personas - porcentaje-infectados - porcentaje-curados - porcentaje-muertos
+    set porcentaje-susceptibles 100 - porcentaje-infectados - porcentaje-curados - porcentaje-muertos
   ]
  tick
 end
@@ -277,6 +282,33 @@ to cambia-color
   if curado? [set color green]
 end
 
+;; procedimiento para el cálculo de la tasa R0, de un modelo SIR donde la S son los individuos Susceptibles, la I son los infectados y la R son los recuperados, donde también se incluyen los muertos
+to tasa-r0
+  let nuevos-infectados casos
+  let nuevos-recuperados recuperados + muertos
+
+  set infectados-anterior count turtles with [infectado?] + nuevos-recuperados - nuevos-infectados
+
+  let susceptibles-actual numero-personas - count turtles with [infectado?] - count turtles with [curado?] - count turtles with [muerto?]
+
+  let susceptibles-inicial numero-personas - count turtles with [infectado?]
+
+  ifelse infectados-anterior < 10
+  [set beta-n 0]
+  [set beta-n (nuevos-infectados / infectados-anterior)]
+
+  ifelse infectados-anterior < 10
+  [set gamma 0]
+  [set gamma (nuevos-recuperados / infectados-anterior)]
+
+
+  if numero-personas - susceptibles-actual != 0 and susceptibles-actual != 0
+  [
+    set r0 (ln (susceptibles-inicial / susceptibles-actual) / (numero-personas - susceptibles-actual))
+    set r0 r0 * susceptibles-inicial
+  ]
+
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 953
@@ -358,7 +390,7 @@ CHOOSER
 forma
 forma
 "dot" "person" "turtle"
-1
+2
 
 SLIDER
 360
@@ -369,7 +401,7 @@ tiempo-recuperacion
 tiempo-recuperacion
 0
 80
-40.0
+60.0
 1
 1
 NIL
@@ -535,7 +567,7 @@ INPUTBOX
 154
 188
 %-conseguir-mascarilla
-58.61
+0.0
 1
 0
 Number
@@ -557,7 +589,7 @@ INPUTBOX
 159
 255
 %-probabilidad-contagio
-20.0
+40.0
 1
 0
 Number
@@ -568,7 +600,7 @@ INPUTBOX
 318
 256
 %-probabilidad-recuperacion
-24.73
+50.0
 1
 0
 Number
@@ -578,7 +610,7 @@ PLOT
 259
 358
 489
-Infectados, Curados
+Número Infectados, Curados y Muertos
 NIL
 NIL
 0.0
@@ -592,12 +624,13 @@ PENS
 "Infectados" 1.0 0 -2674135 true "" "plot count turtles with [infectado?]"
 "Curados" 1.0 0 -13840069 true "" "plot count turtles with [curado?]"
 "Muertos" 1.0 0 -16777216 true "" "plot muertos"
+"Susceptibles" 1.0 0 -1664597 true "" "plot numero-personas - (count turtles with [infectado?] + muertos + count turtles with [curado?])"
 
 MONITOR
-27
-497
-112
-542
+370
+294
+455
+339
 %-infectados
 porcentaje-infectados
 2
@@ -605,10 +638,10 @@ porcentaje-infectados
 11
 
 MONITOR
-119
-498
-188
-543
+370
+346
+439
+391
 %-curados
 porcentaje-curados
 2
@@ -627,13 +660,13 @@ INPUTBOX
 Number
 
 MONITOR
-202
-497
-277
-542
+370
+397
+445
+442
 %-muertos
 porcentaje-muertos
-17
+2
 1
 11
 
@@ -694,10 +727,10 @@ calculo-tasa-recuperacion
 11
 
 MONITOR
-294
-499
-391
-544
+369
+446
+466
+491
 %-susceptibles
 porcentaje-susceptibles
 2
@@ -720,6 +753,17 @@ NIL
 NIL
 NIL
 1
+
+MONITOR
+371
+245
+429
+290
+Tasa R0
+r0
+2
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
