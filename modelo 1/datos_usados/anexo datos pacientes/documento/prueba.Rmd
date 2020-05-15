@@ -5,8 +5,7 @@ date: "28/4/2020"
 output: word_document
 ---
 
-Antes de comenzar se van a introducir las librerías usadas
-
+Antes de comenzar con el análisis de los datos de los pacientes con Covid19 se van a introducir las librerías necesarias.
 
 ```{r libraries, warning=FALSE, message=FALSE}
 library(xlsx)
@@ -15,14 +14,14 @@ library(ggplot2)
 library(tidyverse)
 ```
 
-Se carga el dataset de los datos de los pacientes.
+Se carga el primer dataset bruto de los datos de los pacientes.
 
 ```{r}
-archivo <- "C:/Users/Daniel/Desktop/TFG/data/datos_pacientes.xlsx"
+archivo <- "C:/Users/Daniel/Desktop/TFG-github/TFG/modelo 1/datos_usados/anexo datos pacientes/datos/datos_pacientes.xlsx"
 datos_pacientes <- read.xlsx(archivo,sheetIndex = 1,header = TRUE)
 ```
 
-Primero se van a mostrar las variables que hay en el dataset
+Primero se van a mostrar las variables que hay en el dataset, de las cuales muchas no nos van a ser necesarias para el modelado. 
 
 ```{r}
 names(datos_pacientes)
@@ -119,8 +118,8 @@ A continuación, se van a ver los posibles valores tomados en los síntomas.
 head(levels(datos_pacientes$symptom),20)
 ```
 
-Se puede observar que los síntomas están recogidos de diferentes formas por lo que habrá que normalizarlos. 
-Así mismo, se hará lo mismo con las visitas al hospital
+Se puede observar que los síntomas están recogidos de diferentes formas según el país por lo que habrá que normalizarlos. 
+Así mismo, se hará lo mismo con las visitas al hospital.
 
 ```{r}
 levels(datos_pacientes$hosp_visit_date)
@@ -133,7 +132,7 @@ datos_pacientes$logic_hosp <- ifelse(datos_pacientes$hosp_visit_date!=0,1,0)
 head(datos_pacientes$logic_hosp,25)
 ```
 
-Ahora se van a buscar pacientes que tengan las características que nos interesan rellenadas, es decir, presenten edad, género y los síntomas. La columna 
+Ahora se van a buscar pacientes que tengan las características que nos interesan rellenadas, es decir, presenten edad, género y los síntomas. 
 
 ```{r}
 datos_pacientes_creados <- datos_pacientes[!is.na(datos_pacientes$age),]
@@ -151,18 +150,18 @@ datos_pacientes_creados$death[is.na(datos_pacientes_creados$death)] <- 0
 datos_pacientes_creados$recovered[is.na(datos_pacientes_creados$recovered)] <- 0
 ```
 
-Por último se eliminarán las columnas que no van a ser usadas y se va a generar un dataset nuevo.
+Por último se eliminarán las columnas que no van a ser usadas y se va a generar un dataset nuevo con los datos de los pacientes que no presentan ningún campo que es interesante para el análisis en vacío.
 
 ```{r}
 datos_pacientes_creados <- select(datos_pacientes_creados,id,gender,age,symptom,logic_hosp)
-dir_archivo <- "C:/Users/Daniel/Desktop/TFG/data/datos_covid19.xlsx"
+dir_archivo <- "C:/Users/Daniel/Desktop/TFG-github/TFG/modelo 1/datos_usados/anexo datos pacientes/datos/datos_covid19.xlsx"
 write.xlsx(datos_pacientes_creados,dir_archivo)
 ```
 
-Con este dataset generado se van a normalizar los síntomas genererados, de tal forma que por cada paciente aparezcan todos los síntomas y "true" si lo padece o "false" en el caso contrario.
+Con este dataset generado se van a normalizar los síntomas generados, de tal forma que por cada paciente aparezcan todos los síntomas y "true" si lo padece o "false" en el caso contrario.
 Para ello, se usará Excel y se tienen que tener en cuenta ciertas consideraciones:
 
--La primera de ellas es que los datos provienen de diferentes países por lo que existen cosas nombradas de diferentes formas. Así por ejemplo existían pacientes con el síntoma "tired" que en el dataset ha sido clasificado en "fatigue".
+-La primera de ellas es que los datos provienen de diferentes países por lo que existen síntomas nombrados de diferentes formas. Así por ejemplo existían pacientes con el síntoma "tired" que en el dataset ha sido clasificado en "fatigue", entre otros muchos ejemplos.
 
 -La segunda es que en esta clasificación no se va a atender al grado del síntoma. Al normalizar los datos algunos eran del estilo "high fever", el cual no tendría cabida en el dataset, por lo que se le añade un "true" a la variable "fever".
 
@@ -173,13 +172,14 @@ Para ello, se usará Excel y se tienen que tener en cuenta ciertas consideracion
 De este modo tras haberlo normalizado el dataset obtenido es el siguiente:
 
 ```{r, echo=FALSE}
-dir_archivo <- "C:/Users/Daniel/Desktop/TFG/data/datos_pacientes_con_sintomas.xlsx"
+dir_archivo <- "C:/Users/Daniel/Desktop/TFG-github/TFG/modelo 1/datos_usados/anexo datos pacientes/datos/datos_pacientes_con_sintomas.xlsx"
 datos_pacientes_sintomas <- read.xlsx(dir_archivo,sheetIndex = 1,header = TRUE)
 ```
 
 ```{r}
 head(datos_pacientes_sintomas)
 ```
+
 Una vez se tiene un dataset con la información que se necesita se va a profundizar en el análisis.
 
 Se empezará de nuevo con la edad
@@ -248,7 +248,7 @@ Y así se conseguiría la tabla correspondiente
 tabla_dificultad
 ```
 
-De esta forma se observa como es más probable que los hombres tengan dicho síntoma. A continuación se va a repetir el proceso con la neumonía.
+De esta forma se observa como es más probable que los hombres tengan dicho síntoma. A continuación, se va a repetir el proceso con la neumonía.
 
 ```{r}
 tabla_neumonia <- table(datos_pacientes_sintomas$pneumonia,datos_pacientes_sintomas$gender)
@@ -292,7 +292,8 @@ barplot(table(datos_pacientes_sintomas$cough,datos_pacientes_sintomas$gender), l
 
 Se vuelve a dar la coincidencia que el síntoma tos es más probable en las mujeres que en los hombres.
 
-Por último, se va a estudiar el porcentaje de cada síntoma en la población redondeando a partir del segundo decimal
+Por último, se va a estudiar el porcentaje de cada síntoma en la población redondeando a partir del segundo decimal que es lo que realmente va a servir a la hora de la realización del modelado, ya que se introducirá un porcentaje al agente de tener dicho síntoma.
+
 ```{r, echo=FALSE}
 numero_pacientes <-  numero_hombres+numero_mujeres
 porcentaje_fiebre <- round(sum((datos_pacientes_sintomas$fever=="true")*1)/numero_pacientes * 100,2)
@@ -318,24 +319,14 @@ tabla_porcentajes
 ```
 
 
-
 Además, se va a crear otro dataset en el que se añadan también otras características del primer dataset inicial.
 
 ```{r}
 vector_id <- datos_pacientes_sintomas$id
 data_auxiliar <- datos_pacientes[vector_id,]
 
-datos_pacientes_sintomas$country <- data_auxiliar$country
-
 datos_pacientes_sintomas$traveler<- ifelse(data_auxiliar$traveler!=0,"true","false")
 datos_pacientes_sintomas$traveler[is.na(datos_pacientes_sintomas$traveler)] <- "false"
-
-datos_pacientes_sintomas$visit_Wuhan<- ifelse(data_auxiliar$visiting.Wuhan!=0,"true","false")
-datos_pacientes_sintomas$visit_Wuhan[is.na(datos_pacientes_sintomas$visit_Wuhan)] <- 0
-
-datos_pacientes_sintomas$from_Wuhan<- ifelse(data_auxiliar$from.Wuhan!=0,"true","false")
-datos_pacientes_sintomas$from_Wuhan[is.na(datos_pacientes_sintomas$from_Wuhan)] <- "false"
-
 
 datos_pacientes_sintomas$death<- ifelse(data_auxiliar$death!=0,"true","false")
 
@@ -345,6 +336,22 @@ datos_pacientes_sintomas$recovered<- ifelse(data_auxiliar$recovered!=0,"true","f
 A continuación se va a exportar el dataset en un archivo .xlsx.
 
 ```{r}
-dir_archivo <- "C:/Users/Daniel/Desktop/TFG/data/datos_pacientes_sintomas_completos.xlsx"
+dir_archivo <- "C:/Users/Daniel/Desktop/TFG-github/TFG/modelo 1/datos_usados/anexo datos pacientes/datos/datos_pacientes_sintomas_completos.xlsx"
 write.xlsx(datos_pacientes_sintomas,dir_archivo)
 ```
+
+También se va a conseguir el porcentjaje de recuperados, muertos y viajantes.
+
+```{r, echo=FALSE}
+porcentaje_muerto <- round(sum((datos_pacientes_sintomas$death=="true")*1)/numero_pacientes * 100,2)
+porcentaje_recuperados <- round(sum((datos_pacientes_sintomas$recovered=="true")*1)/numero_pacientes * 100,2)
+porcentaje_viajeros <- round(sum((datos_pacientes_sintomas$traveler=="true")*1)/numero_pacientes * 100,2)
+nombres2 <- c("Porcentaje muerte", "Porcentaje recuperación", "Porcentaje viajeros")
+valores2 <- c(porcentaje_muerto, porcentaje_recuperados, porcentaje_viajeros)
+```
+```{r}
+tabla_porcentajes2 <- data.frame (cbind(nombres2,valores2))
+tabla_porcentajes2
+```
+
+Viendo los resultados obtenidos, se puede concluir que existen muchos pacientes del dataset que seguían infectados el día de descarga del conjunto de datos.
