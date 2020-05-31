@@ -18,7 +18,9 @@ globals
   r0
   gamma
   beta-n
-  border
+  bordery
+  borderx
+  angulo
 ]
 
 turtles-own
@@ -30,6 +32,7 @@ turtles-own
   vacunado?
   confinado?
   patologias_previas?
+  edad
 
   probabilidad-ser-confinado
   tiempo_recup                                     ;; tiempo que tarda en recuperarse el agente de la enfermedad
@@ -61,21 +64,39 @@ turtles-own
 to setup                                           ;; se crean los individuos
   clear-all                                        ;; se limpia la pantalla del modelo
   setup-people                                     ;; se muestran tantos individuos como se hayan introducido en el panel
-  setup-patch
+  setup-patch-borders
   setup-animales
   reset-ticks
 end
 
-to setup-patch
-  ask patch (- max-pxcor / 2 ) 0 [ set pcolor black ]
-  ask patch (max-pxcor / 2 ) 0 [ set pcolor black ]
-  setup-border
+to setup-patch-borders
+  if numero-paises = 0
+  [
+
+  ]
+  if numero-paises  = 2
+  [
+    ask patch (max-pxcor / 2 ) 0 [ set pcolor pink ]
+    ask patch (- max-pxcor / 2 ) 0 [ set pcolor pink ]
+
+    set bordery patches with [(pxcor =  0 and abs (pycor) >= 0)]
+    ask bordery [ set pcolor yellow ]
+  ]
+
+  if numero-paises  = 4
+  [
+    ask patch (max-pxcor / 2 ) (- max-pycor / 2) [ set pcolor pink ]
+    ask patch (- max-pxcor / 2 ) (- max-pycor / 2) [ set pcolor pink ]
+    ask patch (max-pxcor / 2 ) ( max-pycor / 2) [ set pcolor pink ]
+    ask patch (- max-pxcor / 2 ) ( max-pycor / 2) [ set pcolor pink ]
+
+    set bordery patches with [(pxcor =  0 and abs (pycor) >= 0)]
+    ask bordery [ set pcolor yellow ]
+    set borderx patches with [(pycor =  0 and abs (pxcor) >= 0)]
+    ask borderx [ set pcolor yellow ]
+  ]
 end
 
-to setup-border
-  set border patches with [(pxcor =  0 and abs (pycor) >= 0)]
-  ask border [ set pcolor yellow ]
-end
 
 ;; procedimiento para inicializar los agentes humanos
 to setup-people
@@ -90,6 +111,8 @@ to setup-people
       set susceptible? true
       set confinado? false
 
+      set edad random 100
+
       set tiempo_recup random-float 2 * tiempo-recuperacion   ;; se crea el tiempo de recuperación del agente
       set probabilidad-ser-confinado random-float 2 * %-confinamiento
 
@@ -103,10 +126,13 @@ to setup-people
 
       set color white                                ;; se le asigna el color blanco puesto que no han sido curados, infectados o han muerto
       asignar-pais
+      set size 0.75
+
       infeccion-inicial                              ;; se infecta un porcentaje inicial de la población
       cambia-color                                   ;; se colorea el agente según sus características
 
       set es_animal? false
+
     ]
 end
 
@@ -167,17 +193,48 @@ end
 ;; PROCEDIMIENTOS PARA LAS AGENTES (TORTUGAS) Y SUS MOVIMIENTOS
 
 to asignar-pais
-  ifelse xcor <= 0
+  if numero-paises = 0
   [
-     set pais 1
-     set shape forma_pais1
-     set size 0.75
-
+    set pais 1
+    set shape "circle"
   ]
+
+  if numero-paises = 2
   [
-     set pais 2
-     set shape forma_pais2
-     set size 0.75
+    if xcor <= 0
+    [
+      set pais 1
+      set shape "x"
+    ]
+    if xcor >= 0
+    [
+      set pais 2
+      set shape "square"
+    ]
+  ]
+
+  if numero-paises = 4
+  [
+    if xcor >= 0 and ycor >= 0
+    [
+      set pais 1
+      set shape "x"
+    ]
+    if xcor <= 0 and ycor >= 0
+    [
+      set pais 2
+      set shape "square"
+    ]
+    if xcor <= 0 and ycor <= 0
+    [
+      set pais 3
+      set shape "triangle"
+    ]
+    if xcor >= 0  and ycor <= 0
+    [
+      set pais 4
+      set shape "circle"
+    ]
   ]
 end
 
@@ -208,24 +265,24 @@ to go
       confinar
     ]
     poder-recuperarse
-    poder-morir
+    poder-fallecer
   ]
   ask turtles with [not confinado? and infectado? and es_animal?]
   [
     poder-recuperarse
-    poder-morir
+    poder-fallecer
   ]
   ask turtles with [confinado? and infectado? and not es_animal?]
   [
     poder-recuperarse
-    poder-morir
+    poder-fallecer
   ]
   ask turtles with [curado? and confinado?]
   [
     set confinado? false
     move-to patch-here
     ask (patch-at 0 0) [ set pcolor black ]
-    setup-border
+    setup-patch-borders
   ]
   ask turtles
   [
@@ -241,8 +298,166 @@ to go
 end
 
 to mover
-  rt random-float 360
-  fd 1
+  if numero-paises = 0
+  [
+    fd 1.5
+  ]
+  if numero-paises = 2
+  [
+    if viajar? and random-float 100 < tendencia-viajar and not es_animal?
+    [
+      set xcor (- xcor)
+      set ycor (- ycor)
+    ]
+    if pais = 1
+    [
+      ifelse xcor > (- 0.5)
+      [
+        set angulo random-float 180
+        let nueva_posicion patch-at-heading-and-distance angulo (-1)
+        if nueva_posicion != nobody
+        [
+          move-to nueva_posicion
+        ]
+      ]
+      [
+        ifelse xcor < (min-pxcor + 1)
+        [
+          set angulo random-float 180
+        ]
+        [
+          set angulo random-float 360
+        ]
+        rt angulo
+      ]
+      fd 1.5
+
+    ]
+    if pais = 2
+    [
+      ifelse xcor < 0.5
+      [
+        set angulo random-float 180
+        let nueva_posicion patch-at-heading-and-distance angulo (1)
+        if nueva_posicion != nobody
+        [
+          move-to nueva_posicion
+        ]
+      ]
+      [
+        ifelse xcor > (max-pxcor - 1)
+        [
+          set angulo random-float 180
+        ]
+        [
+          set angulo random-float 360
+        ]
+        lt angulo
+      ]
+      fd 1
+    ]
+  ]
+  if numero-paises = 4
+  [
+    if viajar? and random-float 100 < tendencia-viajar and not es_animal?
+    [
+      set xcor (- xcor)
+      set ycor (- ycor)
+    ]
+    if pais = 1
+    [
+      ifelse xcor < 0.5 or ycor < 0.5
+      [
+        set angulo random-float 180
+        let nueva_posicion patch-at-heading-and-distance angulo (1)
+        if nueva_posicion != nobody
+        [
+          move-to nueva_posicion
+        ]
+      ]
+      [
+        ifelse xcor > (max-pxcor - 1) or ycor > (max-pycor - 1)
+        [
+          set angulo random-float 180
+        ]
+        [
+          set angulo random-float 360  ;; inside world
+        ]
+        rt angulo
+      ]
+      fd 0.5
+    ]
+
+   if pais = 2
+    [
+      ifelse xcor > (- 0.5) or ycor < 0.5
+      [
+        set angulo random-float 180
+        let nueva_posicion patch-at-heading-and-distance angulo (1)
+        if nueva_posicion != nobody
+        [
+          move-to nueva_posicion
+        ]
+      ]
+      [
+        ifelse xcor < (min-pxcor + 1) or ycor > (max-pycor - 1)
+        [
+          set angulo random-float 180
+        ]
+        [
+          set angulo random-float 360  ;; inside world
+        ]
+        rt angulo
+      ]
+      fd 0.5
+    ]
+    if pais = 3
+    [
+      ifelse xcor > (- 0.5) or ycor > (- 0.5)
+      [
+        set angulo random-float 180
+        let nueva_posicion patch-at-heading-and-distance angulo (1)
+        if nueva_posicion != nobody
+        [
+          move-to nueva_posicion
+        ]
+      ]
+      [
+        ifelse xcor < (min-pxcor + 1) or ycor < (min-pycor + 1)
+        [
+          set angulo random-float 180
+        ]
+        [
+          set angulo random-float 360  ;; inside world
+        ]
+        rt angulo
+      ]
+      fd 0.5
+    ]
+    if pais = 4
+    [
+      ifelse xcor < 0.5 or ycor > (- 0.5)
+      [
+        set angulo random-float 180
+        let nueva_posicion patch-at-heading-and-distance angulo 1
+        if nueva_posicion != nobody
+        [
+          move-to nueva_posicion
+        ]
+      ]
+      [
+        ifelse xcor > (max-pxcor - 1) or ycor < (min-pycor + 1)
+        [
+          set angulo random-float 180
+        ]
+        [
+          set angulo random-float 360  ;; inside world
+        ]
+        rt angulo
+      ]
+      fd 0.5
+    ]
+  ]
 end
 
 to confinar
@@ -252,29 +467,50 @@ to confinar
 end
 
 ;; procedimiento que puede provocar la muerte del agente si ya ha pasado el tiempo de recuperación
-to poder-morir
+to poder-fallecer
   if tiempo_infectado > tiempo_recup
   [
     if patologias_previas?
     [
       if random-float 100 < %-probabilidad-muerte + 10
-    [
-      set infectado? false
-      set muerto? true
-      ;; no se cuenta el número de animales en los muertos
-      if not es_animal?
       [
-        set muertos (muertos + 1)
+        set infectado? false
+        set muerto? true
+        ;; no se cuenta el número de animales en los muertos
+        if not es_animal?
+        [
+          set muertos (muertos + 1)
+        ]
+        if muerto? and confinado?
+        [
+          set confinado? false
+          move-to patch-here
+          ask (patch-at 0 0) [ set pcolor black ]
+          setup-patch-borders
+        ]
+        die
       ]
-      if muerto? and confinado?
-      [
-        set confinado? false
-        move-to patch-here
-        ask (patch-at 0 0) [ set pcolor black ]
-        setup-border
-      ]
-      die
     ]
+    if edad > 60 and patologias_previas?
+    [
+      if random-float 100 < %-probabilidad-muerte + 15
+      [
+        set infectado? false
+        set muerto? true
+        ;; no se cuenta el número de animales en los muertos
+        if not es_animal?
+        [
+          set muertos (muertos + 1)
+        ]
+        if muerto? and confinado?
+        [
+          set confinado? false
+          move-to patch-here
+          ask (patch-at 0 0) [ set pcolor black ]
+          setup-patch-borders
+        ]
+        die
+      ]
     ]
     if random-float 100 < %-probabilidad-muerte
     [
@@ -290,7 +526,7 @@ to poder-morir
         set confinado? false
         move-to patch-here
         ask (patch-at 0 0) [ set pcolor black ]
-        setup-border
+        setup-patch-borders
       ]
       die
     ]
@@ -481,13 +717,13 @@ to tasa-r0
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-953
+974
 10
-1507
-565
+1504
+541
 -1
 -1
-16.55
+15.82
 1
 10
 1
@@ -553,10 +789,10 @@ numero-personas
 Number
 
 SLIDER
-360
-209
-685
-242
+647
+208
+951
+241
 tiempo-recuperacion
 tiempo-recuperacion
 0
@@ -738,27 +974,27 @@ INPUTBOX
 286
 189
 %-proteccion-mascarilla
-10.0
+5.0
 1
 0
 Number
 
 INPUTBOX
-27
-195
-159
-255
+536
+431
+668
+491
 %-probabilidad-contagio
-50.0
+60.0
 1
 0
 Number
 
 INPUTBOX
-163
-196
-318
-256
+679
+431
+834
+491
 %-probabilidad-recuperacion
 64.81
 1
@@ -766,10 +1002,10 @@ INPUTBOX
 Number
 
 PLOT
-27
-259
-521
-555
+7
+257
+501
+553
 Número Infectados, Curados y Muertos
 NIL
 NIL
@@ -788,10 +1024,10 @@ PENS
 "Vacunados" 1.0 0 -13345367 true "" "plot vacunados"
 
 MONITOR
-534
-405
-619
-450
+75
+202
+151
+247
 %-infectados
 porcentaje-infectados
 2
@@ -799,10 +1035,10 @@ porcentaje-infectados
 11
 
 MONITOR
-638
-405
-707
-450
+230
+202
+296
+247
 %-curados
 porcentaje-curados
 2
@@ -810,10 +1046,10 @@ porcentaje-curados
 11
 
 INPUTBOX
-630
-141
-750
-201
+847
+429
+967
+489
 %-probabilidad-muerte
 11.97
 1
@@ -821,10 +1057,10 @@ INPUTBOX
 Number
 
 MONITOR
-536
-454
-611
-499
+156
+203
+224
+248
 %-muertos
 porcentaje-muertos
 2
@@ -888,10 +1124,10 @@ calculo-tasa-recuperacion
 11
 
 BUTTON
-193
-13
-320
-46
+203
+16
+330
+49
 NIL
 exportar-interfaz
 NIL
@@ -905,10 +1141,10 @@ NIL
 1
 
 MONITOR
-531
-354
-589
-399
+12
+201
+70
+246
 Tasa R0
 r0
 2
@@ -916,21 +1152,21 @@ r0
 11
 
 INPUTBOX
-729
-212
-823
-272
+670
+298
+764
+358
 %-ser-vacunado
-5.0
+2.0
 1
 0
 Number
 
 INPUTBOX
-828
-212
-948
-272
+535
+297
+655
+357
 %-efectividad-vacuna
 1.0
 1
@@ -938,10 +1174,10 @@ INPUTBOX
 Number
 
 MONITOR
-626
-457
-707
-502
+306
+203
+387
+248
 %-vacunados
 porcentaje-vacunados
 17
@@ -949,10 +1185,10 @@ porcentaje-vacunados
 11
 
 MONITOR
-632
-512
-716
-557
+403
+205
+487
+250
 %-susceptibles
 porcentaje-susceptibles
 2
@@ -960,41 +1196,21 @@ porcentaje-susceptibles
 11
 
 INPUTBOX
-632
-278
-748
-338
+790
+300
+906
+360
 %-confinamiento
 5.0
 1
 0
 Number
 
-CHOOSER
-530
-253
-622
-298
-forma_pais1
-forma_pais1
-"x" "square" "circle" "triangle"
-0
-
-CHOOSER
-532
-303
-624
-348
-forma_pais2
-forma_pais2
-"x" "square" "circle" "triangle"
-3
-
 INPUTBOX
-527
-508
-625
-568
+685
+365
+783
+425
 numero-animales
 5.0
 1
@@ -1002,15 +1218,51 @@ numero-animales
 Number
 
 INPUTBOX
-756
-278
-898
-338
+534
+364
+676
+424
 %-tener-patologias-previas
 5.0
 1
 0
 Number
+
+CHOOSER
+500
+205
+638
+250
+numero-paises
+numero-paises
+0 2 4
+1
+
+SWITCH
+540
+257
+643
+290
+viajar?
+viajar?
+0
+1
+-1000
+
+SLIDER
+657
+256
+829
+289
+tendencia-viajar
+tendencia-viajar
+0
+1
+1.0
+0.1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
