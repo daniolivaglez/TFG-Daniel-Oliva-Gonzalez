@@ -17,7 +17,7 @@ library(tidyverse)
 Se carga el primer dataset bruto de los datos de los pacientes.
 
 ```{r}
-archivo <- "C:/Users/Daniel/Desktop/TFG-github/TFG/modelo 1/datos_usados/anexo datos pacientes/datos/datos_pacientes.xlsx"
+archivo <- "C:/Users/Daniel/Desktop/TFG-github/TFG/datos_usados/anexo datos pacientes/datos/datos_pacientes.xlsx"
 datos_pacientes <- read.xlsx(archivo,sheetIndex = 1,header = TRUE)
 ```
 
@@ -154,7 +154,7 @@ Por último se eliminarán las columnas que no van a ser usadas y se va a genera
 
 ```{r}
 datos_pacientes_creados <- select(datos_pacientes_creados,id,gender,age,symptom,logic_hosp)
-dir_archivo <- "C:/Users/Daniel/Desktop/TFG-github/TFG/modelo 1/datos_usados/anexo datos pacientes/datos/datos_covid19.xlsx"
+dir_archivo <- "C:/Users/Daniel/Desktop/TFG-github/TFG/datos_usados/anexo datos pacientes/datos/datos_covid19.xlsx"
 write.xlsx(datos_pacientes_creados,dir_archivo)
 ```
 
@@ -172,7 +172,7 @@ Para ello, se usará Excel y se tienen que tener en cuenta ciertas consideracion
 De este modo tras haberlo normalizado el dataset obtenido es el siguiente:
 
 ```{r, echo=FALSE}
-dir_archivo <- "C:/Users/Daniel/Desktop/TFG-github/TFG/modelo 1/datos_usados/anexo datos pacientes/datos/datos_pacientes_con_sintomas.xlsx"
+dir_archivo <- "C:/Users/Daniel/Desktop/TFG-github/TFG/datos_usados/anexo datos pacientes/datos/datos_pacientes_con_sintomas.xlsx"
 datos_pacientes_sintomas <- read.xlsx(dir_archivo,sheetIndex = 1,header = TRUE)
 ```
 
@@ -336,7 +336,7 @@ datos_pacientes_sintomas$recovered<- ifelse(data_auxiliar$recovered!=0,"true","f
 A continuación se va a exportar el dataset en un archivo .xlsx.
 
 ```{r}
-dir_archivo <- "C:/Users/Daniel/Desktop/TFG-github/TFG/modelo 1/datos_usados/anexo datos pacientes/datos/datos_pacientes_sintomas_completos.xlsx"
+dir_archivo <- "C:/Users/Daniel/Desktop/TFG-github/TFG/datos_usados/anexo datos pacientes/datos/datos_pacientes_sintomas_completos.xlsx"
 write.xlsx(datos_pacientes_sintomas,dir_archivo)
 ```
 
