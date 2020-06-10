@@ -791,58 +791,32 @@ end
 to crear-sintomas
   if infectado? != false
   [
-    if random-float 100 < %-fiebre
-    [
-      set fiebre? true
-    ]
-    if random-float 100 < %-tos
-    [
-      set tos? true
-    ]
-    if random-float 100 < %-dificultad-respirar
-    [
-      set dificultad_respiratoria? true
-    ]
-    if random-float 100 < %-fatiga
-    [
-      set fatiga? true
-    ]
-    if random-float 100 < %-dolor-articular
-    [
-      set dolor_articular? true
-    ]
-    if random-float 100 < %-neumonia
-    [
-      set neumonia? true
-    ]
-    if random-float 100 < %-vomitos
-    [
-      set vomitos? true
-    ]
-    if random-float 100 < %-diarrea
-    [
-      set diarrea? true
-    ]
-    if random-float 100 < %-malestar
-    [
-      set malestar? true
-    ]
-    if random-float 100 < %-dolor-muscular
-    [
-      set dolor_muscular? true
-    ]
-    if random-float 100 < %-dolor-garganta
-    [
-      set dolor_garganta? true
-    ]
-    if random-float 100 < %-falta-apetito
-    [
-      set falta_apetito? true
-    ]
-    if random-float 100 < %-nausea
-    [
-      set nausea? true
-    ]
+    ifelse random-float 100 < %-fiebre
+    [set fiebre? true][set fiebre? false]
+    ifelse random-float 100 < %-tos
+    [set tos? true][set tos? false]
+    ifelse random-float 100 < %-dificultad-respirar
+    [set dificultad_respiratoria? true][set dificultad_respiratoria? false]
+    ifelse random-float 100 < %-fatiga
+    [set fatiga? true][set fatiga? false]
+    ifelse random-float 100 < %-dolor-articular
+    [set dolor_articular? true][set dolor_articular? false]
+    ifelse random-float 100 < %-neumonia
+    [set neumonia? true][set neumonia? false]
+    ifelse random-float 100 < %-vomitos
+    [set vomitos? true][set vomitos? false]
+    ifelse random-float 100 < %-diarrea
+    [set diarrea? true][set diarrea? false]
+    ifelse random-float 100 < %-malestar
+    [set malestar? true][set malestar? false]
+    ifelse random-float 100 < %-dolor-muscular
+    [set dolor_muscular? true][set dolor_muscular? false]
+    ifelse random-float 100 < %-dolor-garganta
+    [set dolor_garganta? true][set dolor_garganta? false]
+    ifelse random-float 100 < %-falta-apetito
+    [set falta_apetito? true][set falta_apetito? false]
+    ifelse random-float 100 < %-nausea
+    [set nausea? true][set nausea? false]
   ]
 end
 

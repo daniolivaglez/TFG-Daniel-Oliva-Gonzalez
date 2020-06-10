@@ -12,10 +12,10 @@ globals
   calculo-casos                                    ;; indica el número de casos según los datos introducidos
   calculo-recuperados                              ;; indica el número de recuperados según los datos introducidos
   calculo-muertos                                  ;; indica el número de muertos según los datos introducidos
-  infectados-anterior
-  r0
-  gamma
-  beta-n
+  infectados-anterior                              ;; número de infectados en el instante anterior
+  r0                                               ;; tasa r0
+  mu                                               ;; tasa de nuevos recuperados por instante
+  lambda                                           ;; tasa de nuevos infectados por instante
 ]
 
 turtles-own
@@ -23,9 +23,9 @@ turtles-own
   infectado?                                       ;; atributo que indica si el agente presenta la enfermedad
   curado?                                          ;; atributo que indica si el agente ha pasado la enfermedad
   susceptible?                                     ;; atributo que indica si el agente puede pasar la enfermedad
-  muerto?                                          ;; atributo que indica si el agente ha muerto debido a la enfermedad
   tiempo_recup                                     ;; tiempo que tarda en recuperarse el agente de la enfermedad
   tiempo_infectado                                 ;; tiempo que lleva infectado el agente
+
   ;; los siguientes atributos son booleanos que indican si el agente presenta o no un determinado síntoma
   fiebre?
   tos?
@@ -45,8 +45,13 @@ turtles-own
 ]
 
 
-;; procedimiento para inicializar los agentes
-to setup                                           ;; se crean los individuos
+
+;; ------------------------
+;; | PROCEDIMIENTOS SETUP |
+;; ------------------------
+
+;; procedimiento para inicializar los agentes (humanos)
+to setup
   clear-all                                        ;; se limpia la pantalla del modelo
   setup-people                                     ;; se muestran tantos individuos como se hayan introducido en el panel
   reset-ticks
@@ -65,7 +70,6 @@ to setup-people
       setxy random-xcor random-ycor                  ;; se le dan unas coordenadas (x,y) aleatorias
       set infectado? false
       set curado? false
-      set muerto? false
       set susceptible? true
       set tiempo_recup random-float 2 * tiempo-recuperacion   ;; se crea el tiempo de recuperación del agente
 
@@ -81,7 +85,7 @@ end
 to cargar-datos-letalidad-contagios
  let file user-file                               ;; el usuario elige el archivo que quiera leer
 
-  if ( file != false )                             ;; el botón no funcionará en el caso de no haberse escogido ningún archivo
+  if (file != false)                             ;; el botón no funcionará en el caso de no haberse escogido ningún archivo
   [
     file-open file                                 ;; se abre el archivo
     set calculo-casos file-read                            ;; se asigna el nºcasos a la variable casos
@@ -113,6 +117,9 @@ to go                                              ;; se realiza el movimiento d
   ask turtles
   [
     mover
+  ]
+  ask turtles with [susceptible?]
+  [
     poder-conseguir-mascarillas
   ]
   ask turtles with [infectado?]
@@ -139,8 +146,6 @@ to poder-morir
   [
     if random-float 100 < %-probabilidad-muerte
     [
-      set infectado? false
-      set muerto? true
       set muertos (muertos + 1)
       die
     ]
@@ -150,7 +155,7 @@ end
 
 ;; procedimiento para la obtención de una mascarilla y disminuir la posibilidad de contagio del agente
 to poder-conseguir-mascarillas
-  if susceptible? != false
+  if susceptible? = true
   [
     if random-float 100 < %-conseguir-mascarilla
     [
@@ -163,12 +168,12 @@ end
 ;; este procedimiento permite infectar a los agentes cercanos a aquellos que se encuentran infectados
 ;; si el agente cercano presenta una mascarilla, la probabilidad de contagio disminuye
 to infectar
-  let no-infectados-cercanos (turtles-on neighbors) with [not infectado? and not curado? and not muerto? and susceptible?]
+  let no-infectados-cercanos (turtles-on neighbors) with [not infectado? and not curado? and susceptible?]
   if no-infectados-cercanos != nobody
   [
     ask no-infectados-cercanos
     [
-      if tiene_mascarilla? != false
+      if tiene_mascarilla? = true
       [
         if random-float 100 < (%-probabilidad-contagio - %-proteccion-mascarilla)
         [
@@ -219,60 +224,34 @@ end
 ;; el siguiente procedimiento genera los síntomas para los agentes cuando son infectados
 ;; según un número aleatorio generado y el porcentaje introducido por pantalla
 to crear-sintomas
-  if infectado? != false
+  if infectado? = true
   [
-    if random-float 100 < %-fiebre
-    [
-      set fiebre? true
-    ]
-    if random-float 100 < %-tos
-    [
-      set tos? true
-    ]
-    if random-float 100 < %-dificultad-respirar
-    [
-      set dificultad_respiratoria? true
-    ]
-    if random-float 100 < %-fatiga
-    [
-      set fatiga? true
-    ]
-    if random-float 100 < %-dolor-articular
-    [
-      set dolor_articular? true
-    ]
-    if random-float 100 < %-neumonia
-    [
-      set neumonia? true
-    ]
-    if random-float 100 < %-vomitos
-    [
-      set vomitos? true
-    ]
-    if random-float 100 < %-diarrea
-    [
-      set diarrea? true
-    ]
-    if random-float 100 < %-malestar
-    [
-      set malestar? true
-    ]
-    if random-float 100 < %-dolor-muscular
-    [
-      set dolor_muscular? true
-    ]
-    if random-float 100 < %-dolor-garganta
-    [
-      set dolor_garganta? true
-    ]
-    if random-float 100 < %-falta-apetito
-    [
-      set falta_apetito? true
-    ]
-    if random-float 100 < %-nausea
-    [
-      set nausea? true
-    ]
+    ifelse random-float 100 < %-fiebre
+    [set fiebre? true][set fiebre? false]
+    ifelse random-float 100 < %-tos
+    [set tos? true][set tos? false]
+    ifelse random-float 100 < %-dificultad-respirar
+    [set dificultad_respiratoria? true][set dificultad_respiratoria? false]
+    ifelse random-float 100 < %-fatiga
+    [set fatiga? true][set fatiga? false]
+    ifelse random-float 100 < %-dolor-articular
+    [set dolor_articular? true][set dolor_articular? false]
+    ifelse random-float 100 < %-neumonia
+    [set neumonia? true][set neumonia? false]
+    ifelse random-float 100 < %-vomitos
+    [set vomitos? true][set vomitos? false]
+    ifelse random-float 100 < %-diarrea
+    [set diarrea? true][set diarrea? false]
+    ifelse random-float 100 < %-malestar
+    [set malestar? true][set malestar? false]
+    ifelse random-float 100 < %-dolor-muscular
+    [set dolor_muscular? true][set dolor_muscular? false]
+    ifelse random-float 100 < %-dolor-garganta
+    [set dolor_garganta? true][set dolor_garganta? false]
+    ifelse random-float 100 < %-falta-apetito
+    [set falta_apetito? true][set falta_apetito? false]
+    ifelse random-float 100 < %-nausea
+    [set nausea? true][set nausea? false]
   ]
 end
 
@@ -289,20 +268,20 @@ to tasa-r0
 
   set infectados-anterior count turtles with [infectado?] + nuevos-recuperados - nuevos-infectados
 
-  let susceptibles-actual numero-personas - count turtles with [infectado?] - count turtles with [curado?] - count turtles with [muerto?]
+  let susceptibles-actual numero-personas - count turtles with [infectado?] - count turtles with [curado?]
 
   let susceptibles-inicial numero-personas - count turtles with [infectado?]
 
-  ifelse infectados-anterior < 10
-  [set beta-n 0]
-  [set beta-n (nuevos-infectados / infectados-anterior)]
+  ifelse infectados-anterior < 5
+  [set lambda 0]
+  [set lambda (nuevos-infectados / infectados-anterior)]
 
-  ifelse infectados-anterior < 10
-  [set gamma 0]
-  [set gamma (nuevos-recuperados / infectados-anterior)]
+  ifelse infectados-anterior < 5
+  [set mu 0]
+  [set mu (nuevos-recuperados / infectados-anterior)]
 
 
-  if numero-personas - susceptibles-actual != 0 and susceptibles-actual != 0
+  if numero-personas - susceptibles-actual > 0 and susceptibles-actual > 0
   [
     set r0 (ln (susceptibles-inicial / susceptibles-actual) / (numero-personas - susceptibles-actual))
     set r0 r0 * susceptibles-inicial
@@ -334,7 +313,7 @@ GRAPHICS-WINDOW
 0
 0
 1
-ticks
+días
 30.0
 
 BUTTON
@@ -390,7 +369,7 @@ CHOOSER
 forma
 forma
 "dot" "person" "turtle"
-2
+1
 
 SLIDER
 360
@@ -401,7 +380,7 @@ tiempo-recuperacion
 tiempo-recuperacion
 0
 80
-60.0
+30.0
 1
 1
 NIL
@@ -567,7 +546,7 @@ INPUTBOX
 154
 188
 %-conseguir-mascarilla
-0.0
+50.0
 1
 0
 Number
@@ -578,7 +557,7 @@ INPUTBOX
 286
 189
 %-proteccion-mascarilla
-10.0
+30.0
 1
 0
 Number
@@ -600,7 +579,7 @@ INPUTBOX
 318
 256
 %-probabilidad-recuperacion
-50.0
+62.67
 1
 0
 Number
@@ -608,8 +587,8 @@ Number
 PLOT
 27
 259
-358
-489
+577
+547
 Número Infectados, Curados y Muertos
 NIL
 NIL
@@ -627,10 +606,10 @@ PENS
 "Susceptibles" 1.0 0 -1664597 true "" "plot numero-personas - (count turtles with [infectado?] + muertos + count turtles with [curado?])"
 
 MONITOR
-370
-294
-455
-339
+593
+328
+678
+373
 %-infectados
 porcentaje-infectados
 2
@@ -638,10 +617,10 @@ porcentaje-infectados
 11
 
 MONITOR
-370
-346
-439
-391
+593
+380
+662
+425
 %-curados
 porcentaje-curados
 2
@@ -654,16 +633,16 @@ INPUTBOX
 750
 201
 %-probabilidad-muerte
-5.61
+11.31
 1
 0
 Number
 
 MONITOR
-370
-397
-445
-442
+593
+431
+668
+476
 %-muertos
 porcentaje-muertos
 2
@@ -727,10 +706,10 @@ calculo-tasa-recuperacion
 11
 
 MONITOR
-369
-446
-466
-491
+592
+480
+689
+525
 %-susceptibles
 porcentaje-susceptibles
 2
@@ -755,10 +734,10 @@ NIL
 1
 
 MONITOR
-371
-245
-429
-290
+594
+279
+652
+324
 Tasa R0
 r0
 2
