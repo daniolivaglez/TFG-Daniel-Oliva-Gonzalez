@@ -144,6 +144,7 @@ to setup-people
       cambia-color                                   ;; se colorea el agente según sus características
 
       set es_animal? false                           ;; al crearse los humanos, este atributo será false
+      set tiene_mascarilla? false                   ;; al inicio nadie tiene mascarillas
 
     ]
 end
@@ -302,25 +303,41 @@ to go
   [
     stop
   ]
-  ;; si un agente humano no está confinado ni hospitalizado se puede mover, además de poder conseguir mascarilla y vacuna
-  ask turtles with [not confinado? and not es_animal? and not hospitalizado?]
+  ;; si un agente humano no está confinado ni hospitalizado podrá confinarse o se moverá, además de poder conseguir mascarilla y vacuna
+  ask turtles with [susceptible? and not confinado? and not es_animal? and not hospitalizado?]
+  [
+    ifelse random-float 100 < probabilidad-ser-confinado
+    [
+      confinar
+    ]
+    [
+      mover
+      poder-conseguir-mascarillas
+      poder-vacunarse
+    ]
+  ]
+  ;; un agente humano que haya sido curado y no esté confinado podrá moverse con libertad
+  ask turtles with [curado? and not confinado?]
   [
     mover
-    poder-conseguir-mascarillas
-    poder-vacunarse
   ]
   ;; por el contrario, un agente animal solo podrá moverse
   ask turtles with [es_animal?]
   [
     mover
   ]
-  ;; un agente humano infectado y sin estar confinado ni en un hospital podrá contagiar a los agentes de sus alrededores. Un humano puede infectar a otro humano o a un animal, pero no podrá ser infectado
+  ;; un agente vacunado se podrá mover libremente
+  ask turtles with [vacunado?]
+  [
+    mover
+  ]
+    ;; un agente humano infectado y sin estar confinado ni en un hospital podrá contagiar a los agentes de sus alrededores. Un humano puede infectar a otro humano o a un animal, pero no podrá ser infectado
   ;; por un animal
   ask turtles with [infectado? and not confinado? and not es_animal? and not hospitalizado?]
   [
     infectar
   ]
-  ;; un agente humano infectado y sin estar confinado ni en un hsopital, tendrá una probabilidad de cumplir su confinamiento. Además también
+  ;; un agente humano infectado y sin estar confinado ni en un hospital, tendrá una probabilidad de cumplir su confinamiento. Además también
   ;; podrá recuperarse o fallecer
   ask turtles with [not confinado? and infectado? and not es_animal? and not hospitalizado?]
   [
@@ -331,7 +348,7 @@ to go
     poder-recuperarse
     poder-fallecer
   ]
-  ;; un agente humano infectado que no esté confinado ni hospitalizado podrá ser hospitalizado. Al hospitalizarse se activa el confinamiento
+  ;; un agente humano infectado que no esté confinado ni hospitalizado podrá ser hospitalizado. Al hospitalizarse se activa el confinamiento al permanecer en el hospital
   ask turtles with [not confinado? and infectado? and not es_animal? and not hospitalizado?]
   [
     if random-float 100 < tendencia-ir-hospital
@@ -340,7 +357,7 @@ to go
       set confinado? true
     ]
   ]
-  ;; un agente humano infectado y hsopitalizado podrá recuperado y fallcer
+  ;; un agente humano infectado y hospitalizado podrá recuperarse o fallecer
   ask turtles with [hospitalizado? and not es_animal? and infectado?]
   [
     poder-recuperarse
@@ -357,6 +374,14 @@ to go
   [
     poder-recuperarse
     poder-fallecer
+  ]
+  ;; si un agente se vacuna estando confinado, dará por acabado su confinamiento
+  ask turtles with [vacunado? and confinado?]
+  [
+    set confinado? false
+    move-to patch-here
+    ask (patch-at 0 0) [ set pcolor black ]
+    setup-patch-borders
   ]
   ;; un agente humano curado y hospitalizado abandonará el hospital
   ask turtles with [curado? and hospitalizado? and not es_animal?]
@@ -394,19 +419,18 @@ end
 ;; mientras que otros cruzarán la frontera. En el caso de cuatro países ocurre lo mismo que en el de dos solo que con dos fronteras
 ;; en el caso de haber más de un país, se podrá activar la posibilidad de viajar de un país a otro de forma aleatoria
 ;; se comprueba el país actual en el que se encuentra un agente y si se encuentra cerca de la frontera se pretende cambiar su posición
-;; como es un mapa continuo, es decir, si avanza hacia la derecha, aparecerá en la izquiera, cuando se acerque a estos límites, se cambiará su dirección
+;; como es un mapa continuo, es decir, si avanza hacia la derecha, aparecerá en la izquierda, cuando se acerque a estos límites, se cambiará su dirección
 to mover
   if numero-paises = 1
   [
-    fd 1.5
+    fd 0.5
   ]
   if numero-paises = 2
   [
     ;; si está activado el interruptor de viajar y el número generado es menor que la tendencia, el agente humano cambiará sus coordenadas. No pueden viajar los animales
     if viajar? and random-float 100 < tendencia-viajar and not es_animal?
     [
-      set xcor (- xcor)
-      set ycor (- ycor)
+      setxy random-xcor random-ycor
       asignar-pais-actual
     ]
     if pais_actual = 1
@@ -421,7 +445,7 @@ to mover
         ]
       ]
       [
-        ifelse xcor < (min-pxcor + 1)
+        ifelse xcor < (min-pxcor + 1) or ycor > (max-pycor - 1) or ycor < (min-pycor + 1)
         [
           set angulo random-float 180
         ]
@@ -445,7 +469,7 @@ to mover
         ]
       ]
       [
-        ifelse xcor > (max-pxcor - 1)
+        ifelse xcor > (max-pxcor - 1) or ycor > (max-pycor - 1) or ycor < (min-pycor + 1)
         [
           set angulo random-float 180
         ]
@@ -462,8 +486,7 @@ to mover
     ;; si está activado el interruptor de viajar y el número generado es menor que la tendencia, el agente humano cambiará sus coordenadas. No pueden viajar los animales
     if viajar? and random-float 100 < tendencia-viajar and not es_animal?
     [
-      set xcor (- xcor)
-      set ycor (- ycor)
+      setxy random-xcor random-ycor
       asignar-pais-actual
     ]
     if pais_actual = 1
@@ -483,7 +506,7 @@ to mover
           set angulo random-float 180
         ]
         [
-          set angulo random-float 360  ;; inside world
+          set angulo random-float 360
         ]
         rt angulo
       ]
@@ -507,7 +530,7 @@ to mover
           set angulo random-float 180
         ]
         [
-          set angulo random-float 360  ;; inside world
+          set angulo random-float 360
         ]
         rt angulo
       ]
@@ -530,7 +553,7 @@ to mover
           set angulo random-float 180
         ]
         [
-          set angulo random-float 360  ;; inside world
+          set angulo random-float 360
         ]
         rt angulo
       ]
@@ -553,7 +576,7 @@ to mover
           set angulo random-float 180
         ]
         [
-          set angulo random-float 360  ;; inside world
+          set angulo random-float 360
         ]
         rt angulo
       ]
@@ -725,9 +748,12 @@ to poder-recuperarse
   [
     if tiempo_infectado > (tiempo_recup / 2)
     [
-      set infectado? false
-      set curado? true
-      set recuperados (recuperados + 1)
+      if random-float 100 < %-probabilidad-recuperacion
+      [
+        set infectado? false
+        set curado? true
+        set recuperados (recuperados + 1)
+      ]
     ]
   ]
 end
@@ -827,30 +853,35 @@ to cambia-color
 end
 
 ;; procedimiento para el cálculo de la tasa R0, de un modelo SIR donde la S son los individuos Susceptibles, la I son los infectados y la R son los recuperados, donde también se incluyen los muertos
-;; de esta forma se implementa la ecuación diferencial del modelo SIR
 to tasa-r0
   let nuevos-infectados casos
   let nuevos-recuperados recuperados + muertos
 
   set infectados-anterior count turtles with [infectado?] + nuevos-recuperados - nuevos-infectados
 
-  let susceptibles-actual numero-personas - count turtles with [infectado?] - count turtles with [curado?] - count turtles with [muerto?]
+  let susceptibles-actual numero-personas - count turtles with [infectado?] - count turtles with [curado?] - muertos
 
-  let susceptibles-inicial numero-personas - count turtles with [infectado?]
+  let susceptibles-inicial count turtles with [susceptible?]
 
+  ;; si el número de infectados en el día anterior es menor que 5, se considerará nulo
   ifelse infectados-anterior < 5
   [set lambda 0]
+  ;; por el contrario, se actualizará la tasa de nuevos infectados
   [set lambda (nuevos-infectados / infectados-anterior)]
 
+  ;; si el número de infectados en el día anterior es menor que 5, se considerará nulo
   ifelse infectados-anterior < 5
   [set mu 0]
+  ;; por el contrario se actualizará la tasa de nuevos recuperados
   [set mu (nuevos-recuperados / infectados-anterior)]
 
-  if (numero-personas - susceptibles-actual > 0) and (susceptibles-actual > 0)
+  ;; (numero-personas - susceptibles-actual) tiene que ser mayor que 0 para no causar problemas con el logaritmo, así como susceptibles-actual
+  if numero-personas - susceptibles-actual > 0 and susceptibles-actual > 0
   [
     set r0 (ln (susceptibles-inicial / susceptibles-actual) / (numero-personas - susceptibles-actual))
     set r0 r0 * susceptibles-inicial
   ]
+
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -881,9 +912,9 @@ días
 30.0
 
 BUTTON
-30
+29
 12
-93
+90
 45
 NIL
 setup
@@ -920,21 +951,21 @@ INPUTBOX
 183
 122
 numero-personas
-300.0
+150.0
 1
 0
 Number
 
 SLIDER
-647
+651
 208
-951
+955
 241
 tiempo-recuperacion
 tiempo-recuperacion
 0
 80
-78.0
+40.0
 1
 1
 NIL
@@ -946,7 +977,7 @@ INPUTBOX
 351
 121
 %-infeccion-inicial
-10.0
+15.0
 1
 0
 Number
@@ -1100,7 +1131,7 @@ INPUTBOX
 154
 188
 %-conseguir-mascarilla
-5.0
+10.0
 1
 0
 Number
@@ -1111,7 +1142,7 @@ INPUTBOX
 286
 189
 %-proteccion-mascarilla
-5.0
+10.0
 1
 0
 Number
@@ -1161,9 +1192,9 @@ PENS
 "Vacunados" 1.0 0 -13345367 true "" "plot vacunados"
 
 MONITOR
-75
+76
 202
-151
+152
 247
 %-infectados
 porcentaje-infectados
@@ -1172,9 +1203,9 @@ porcentaje-infectados
 11
 
 MONITOR
-230
+231
 202
-296
+297
 247
 %-curados
 porcentaje-curados
@@ -1194,9 +1225,9 @@ INPUTBOX
 Number
 
 MONITOR
-156
+157
 203
-224
+225
 248
 %-muertos
 porcentaje-muertos
@@ -1305,26 +1336,26 @@ INPUTBOX
 641
 398
 %-efectividad-vacuna
-1.0
+2.0
 1
 0
 Number
 
 MONITOR
-306
+307
 203
-387
+388
 248
 %-vacunados
 porcentaje-vacunados
-17
+2
 1
 11
 
 MONITOR
-403
+404
 205
-487
+488
 250
 %-susceptibles
 porcentaje-susceptibles
@@ -1338,7 +1369,7 @@ INPUTBOX
 889
 399
 %-confinamiento
-5.0
+1.0
 1
 0
 Number
@@ -1366,14 +1397,14 @@ INPUTBOX
 Number
 
 CHOOSER
-500
-205
-638
-250
+505
+207
+643
+252
 numero-paises
 numero-paises
 1 2 4
-1
+0
 
 SWITCH
 527
@@ -1395,7 +1426,7 @@ tendencia-viajar
 tendencia-viajar
 0
 15
-9.0
+8.0
 0.2
 1
 NIL
@@ -1421,7 +1452,7 @@ HORIZONTAL
 
 ## ¿Cómo funciona?
 
-Este modelo trata de simular una epidemia de una forma más compleja. Además de incluir los parámetros del modelo 1, se puede escoger entre un, dos y cuatros países de tal forma que se genere una frontera por cada dos países y un hospital por cada país. Al añadirse hospitales, se incluye la tendencia de los agentes a ir al hospital. También se incluyen las vacunas con un porcentaje de conseguirla y otro porcentaje de efectividad de la vacuna. Además se incluyen animales, que no pueden infectar a los humanos pero sí pueden ser infectados por ellos. Otros parámetros incluidos son el porcentaje de cumplir el confinamiento y de presentar patologías previas, lo que influye a la hora de la probabilidad de fallecer del agente humano. A los humanos se les añade la edad. Por último, otro parámetro importante añadido es el interruptor de viajar y la tendencia a viajar. 
+Este modelo trata de simular una epidemia (centrándose en la de COVID19 al incluir los síntomas de dicha enfermedad, aunque si bien podrían simularse diferentes enfermedades cambiando ciertos parámetros) de una forma más compleja. Además de incluir los parámetros del modelo 1, se puede escoger entre un, dos y cuatros países de tal forma que se genere una frontera por cada dos países y un hospital por cada país. Al añadirse hospitales, se incluye la tendencia de los agentes a ir al hospital. También se incluyen las vacunas con un porcentaje de conseguirla y otro porcentaje de efectividad de la vacuna. Además se incluyen animales, que no pueden infectar a los humanos pero sí pueden ser infectados por ellos. Otros parámetros incluidos son el porcentaje de cumplir el confinamiento y de presentar patologías previas, lo que influye a la hora de la probabilidad de fallecer del agente humano. A los humanos se les añade la edad. Por último, otro parámetro importante añadido es el interruptor de viajar y la tendencia a viajar. 
 
 ## ¿Cómo usarlo?
 
@@ -1439,7 +1470,12 @@ Se sugiere escoger el número de personas (unas 100) en función de los países 
 
 ## Futuras mejoras
 
-Algunas posibles mejoras a añadir son la inclusión de ambulancias, así como establecer un número de personas máximo por hospital.
+Algunas posibles mejoras a añadir son:
+-	Inclusión de más de una enfermedad a la simulación, con tal de conseguir un mayor realismo.
+-	Inclusión de estaciones del año. Las enfermedades no se expanden igual en invierno que en verano. Normalmente, los virus suelen morir con el calor, por lo que podría ser un factor determinante en su expansión.
+-	Inclusión de diferentes sitios de reunión de agentes humanos, tales como supermercados.
+-	Inclusión de ambulancias para aumentar la tendencia de los agentes humanos a ir al hospital.
+-	Otra mejora podría ser el establecimiento de un número máximo de personas por hospital, con el fin de convertirlo en más realista.
 @#$#@#$#@
 default
 true

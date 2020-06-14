@@ -50,7 +50,7 @@ turtles-own
 ;; | PROCEDIMIENTOS SETUP |
 ;; ------------------------
 
-;; procedimiento para inicializar los agentes (humanos)
+;; procedimiento para inicializar la simulación
 to setup
   clear-all                                        ;; se limpia la pantalla del modelo
   setup-people                                     ;; se muestran tantos individuos como se hayan introducido en el panel
@@ -63,7 +63,7 @@ to exportar-interfaz                               ;; permite exportar una image
   export-interface file                            ;; se guarda la imagen actual de la interfaz en el archivo seleccionado
 end
 
-;; procedimiento para inicializar los individuos
+;; procedimiento para inicializar los agentes (humanos)
 to setup-people
   create-turtles numero-personas
     [
@@ -102,32 +102,41 @@ to mostrar-letalidad-y-tasa-recuperacion
   set calculo-tasa-recuperacion calculo-recuperados / calculo-casos * 100
 end
 
+;; -----------------------------------------------------
+;; | PROCEDIMIENTOS PARA LAS AGENTES Y SUS MOVIMIENTOS |
+;; -----------------------------------------------------
 
+;; procedimiento que permitirá moverse a los agentes
 to mover
   rt random-float 360
   fd 1
 end
 
 ;; procedimiento para simular el movimiento de los agentes
-to go                                              ;; se realiza el movimiento de los individuos
+to go
+  ;; si no quedan agentes infectados, la simulación se da por finalizada
   if all? turtles [not infectado?]
   [
     stop
   ]
+  ;; en este modelo todos los agentes podrán moverse
   ask turtles
   [
     mover
   ]
+  ;; los agentes susceptibles de contraer la enfermedad podrá conseguir mascarillas para así disminuir el porcentaje de probabilidad de contagio
   ask turtles with [susceptible?]
   [
     poder-conseguir-mascarillas
   ]
+  ;; los agentes infectados podrán infectar, recuperarse y fallecer
   ask turtles with [infectado?]
   [
     infectar
     poder-recuperarse
     poder-morir
   ]
+  ;; finalmente se cambia el color de los agentes según las características y varía la tasa r0 y los porcentajes de la población
   ask turtles
   [
     cambia-color
@@ -268,19 +277,23 @@ to tasa-r0
 
   set infectados-anterior count turtles with [infectado?] + nuevos-recuperados - nuevos-infectados
 
-  let susceptibles-actual numero-personas - count turtles with [infectado?] - count turtles with [curado?]
+  let susceptibles-actual numero-personas - count turtles with [infectado?] - count turtles with [curado?] - muertos
 
-  let susceptibles-inicial numero-personas - count turtles with [infectado?]
+  let susceptibles-inicial count turtles with [susceptible?]
 
+  ;; si el número de infectados en el día anterior es menor que 5, se considerará nulo
   ifelse infectados-anterior < 5
   [set lambda 0]
+  ;; por el contrario, se actualizará la tasa de nuevos infectados
   [set lambda (nuevos-infectados / infectados-anterior)]
 
+  ;; si el número de infectados en el día anterior es menor que 5, se considerará nulo
   ifelse infectados-anterior < 5
   [set mu 0]
+  ;; por el contrario se actualizará la tasa de nuevos recuperados
   [set mu (nuevos-recuperados / infectados-anterior)]
 
-
+  ;; (numero-personas - susceptibles-actual) tiene que ser mayor que 0 para no causar problemas con el logaritmo, así como susceptibles-actual
   if numero-personas - susceptibles-actual > 0 and susceptibles-actual > 0
   [
     set r0 (ln (susceptibles-inicial / susceptibles-actual) / (numero-personas - susceptibles-actual))
@@ -568,7 +581,7 @@ INPUTBOX
 159
 255
 %-probabilidad-contagio
-40.0
+80.0
 1
 0
 Number
@@ -745,41 +758,19 @@ r0
 11
 
 @#$#@#$#@
-## WHAT IS IT?
+# Modelo 1
 
-(a general understanding of what the model is trying to show or explain)
+## ¿Cómo funciona?
 
-## HOW IT WORKS
+Este modelo trata de simular una epidemia (centrándose en la de COVID19 al incluir los síntomas de dicha enfermedad) de una forma sencilla. En este modelo el usuario podrá simular el desarrollo de una enfermedad en una población con unas características determinadas y así ver cómo varían los porcentajes de infectados, susceptibles, curados y fallecidos, además de la tasa r0.
 
-(what rules the agents use to create the overall behavior of the model)
+## ¿Cómo usarlo?
 
-## HOW TO USE IT
-
-(how to use the model, including a description of each of the items in the Interface tab)
-
-## THINGS TO NOTICE
-
-(suggested things for the user to notice while running the model)
-
-## THINGS TO TRY
-
-(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
-
-## EXTENDING THE MODEL
-
-(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
-
-## NETLOGO FEATURES
-
-(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
-
-## RELATED MODELS
-
-(models in the NetLogo Models Library and elsewhere which are of related interest)
-
-## CREDITS AND REFERENCES
-
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
+Para usarlo, lo primero que se debe hacer es abrir el archivo "covid19_españa_03_06.txt" o el archivo "covid19_españa_20_05.txt" usando cargar-datos-letalidad-contagios. Pulsando mostrar-letalidad-y-tasa-recuperación se muestra la tasa de letalidad y de recuperación según los datos introducidos, que puede ser de ayuda para la simulación (completar entradas de %-probabilidad-recuperacion y %-probabilidad-muerte). También quedaría por añadir el %-probabilidad-contagio.
+Para empezar se rellena las entradas numero-personas y %-infeccion-inicial. También se completan los procentajes referidos a las mascarillas. 
+El siguiente paso sería establecer los porcentajes de los síntomas. Éstos serán los sacados del análisis de datos de los pacientes.
+También ha de establecerse el tiempo-recuperacion.
+Finalmente, se pulsa el botón setup para establecer la simulación y se pulsa el botón go para que comience la simulación.
 @#$#@#$#@
 default
 true
